@@ -12,9 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
-import java.nio.charset.Charset
 import java.security.KeyStore
-import java.util.*
 import java.util.concurrent.Executor
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -25,11 +23,12 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mainLayout: View
     private lateinit var editText: EditText
+    private lateinit var cryptButton : Button
     private lateinit var biometricPrompt: BiometricPrompt
     private lateinit var promptInfo: BiometricPrompt.PromptInfo
-    private lateinit var ciphertext : ByteArray
     private var isEncrypt: Boolean = false
     private var isAuthorised: Boolean = false
+    private lateinit var ciphertext : ByteArray
     private lateinit var initializationVector: ByteArray
     private val encryptionBlockMode : String = KeyProperties.BLOCK_MODE_GCM
     private val encryptionPadding : String = KeyProperties.ENCRYPTION_PADDING_NONE
@@ -45,7 +44,8 @@ class MainActivity : AppCompatActivity() {
         val biometricManager: BiometricManager = BiometricManager.from(this)
         checkHardwareAndAuthenticate(biometricManager)
         editText = findViewById(R.id.editText)
-        val cryptButton : Button = findViewById(R.id.crypt_button)
+        cryptButton = findViewById(R.id.crypt_button)
+        cryptButton.text = getString(R.string.button_encrypt)
         cryptButton.setOnClickListener( object: View.OnClickListener{
             override fun onClick(v: View?) {
                 performCryptography() // this functions performs both encryption/decryption
@@ -109,7 +109,8 @@ class MainActivity : AppCompatActivity() {
                 Log.d(tag, "$errorCode :: $errString")
                 if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
                     biometricPrompt.cancelAuthentication()
-                    editText.setText(getString(R.string.hello))
+                    editText.setText(R.string.sampletext)
+                    cryptButton.text = getString(R.string.button_encrypt)
                     isEncrypt = false
                 }
             }
@@ -122,7 +123,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun performCryptography() {
 
-        val cipher : Cipher = getCipher()
+        // Initializing a cipher template with chosen transformation
+        val cipher : Cipher = Cipher.getInstance("$encryptionAlgorithm/$encryptionBlockMode/$encryptionPadding")
         // Fetches/creates an instance of SecretKey using [Cipher.ENCRYPT_MODE]/[Cipher.DECRYPT_MODE] and
         // then initializes the Cipher with that key for encryption/decryption.
         val secretKey : SecretKey = getSecretKey()
@@ -131,14 +133,10 @@ class MainActivity : AppCompatActivity() {
             biometricPrompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
             true
         } else {
-            cipher.init(Cipher.DECRYPT_MODE, secretKey,GCMParameterSpec(128, initializationVector))
+            cipher.init(Cipher.DECRYPT_MODE, secretKey,GCMParameterSpec(128,initializationVector))
             biometricPrompt.authenticate(promptInfo, BiometricPrompt.CryptoObject(cipher))
             false
         }
-    }
-
-    private fun getCipher(): Cipher {
-        return Cipher.getInstance("$encryptionAlgorithm/$encryptionBlockMode/$encryptionPadding")
     }
 
     private fun getSecretKey(): SecretKey {
@@ -156,9 +154,7 @@ class MainActivity : AppCompatActivity() {
                 KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(encryptionBlockMode)
                 .setEncryptionPaddings(encryptionPadding)
-                .setKeySize(256)
                 .setUserAuthenticationRequired(true)
-                .setUserAuthenticationValidityDurationSeconds(10)
                 .build()
         val keyGenerator: KeyGenerator = KeyGenerator.getInstance(encryptionAlgorithm, androidKeystore)
         keyGenerator.init(keyGenParameterSpec)
@@ -166,15 +162,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun convertInput(cryptoObject: BiometricPrompt.CryptoObject?) {
-        val cipher : Cipher? = cryptoObject?.cipher
+        val cipher = cryptoObject?.cipher
         val input: String = if(isEncrypt) {
             val plaintext: String = editText.text.toString()
-            ciphertext = cipher!!.doFinal(plaintext.toByteArray(Charset.forName("UTF-8")))
+            ciphertext = cipher!!.doFinal(plaintext.toByteArray())
             initializationVector = cipher.iv
-            String(ciphertext, Charset.forName("UTF-8"))
+            cryptButton.text = getString(R.string.button_decrypt)
+            String(ciphertext)
+
         } else {
             val plaintext : ByteArray = cipher!!.doFinal(ciphertext)
-            String(plaintext, Charset.forName("UTF-8"))
+            cryptButton.text = getString(R.string.button_encrypt)
+            String(plaintext)
         }
         editText.setText(input)
     }

@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">BiometricCryptoApp</string>
     <string name="sampletext">Sample Text</string>
-    <string name="encrypt_decrypt">encryp_decrypt</string>
+    <string name="encrypt_decrypt">Encrypt/Decrypt</string>
     <string name="hello" />
+    <string name="button_encrypt">ENCRYPT</string>
+    <string name="button_decrypt">DECRYPT</string>
 </resources>
