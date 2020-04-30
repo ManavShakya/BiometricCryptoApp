@@ -1,0 +1,2 @@
+rootProject.name='BiometricCryptoApp'
+include ':app'
